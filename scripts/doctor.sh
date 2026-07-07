@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# doctor.sh — read-only health check for agy-plugin-codex (Antigravity for Codex).
+# doctor.sh — read-only health check for agy-plugin (Antigravity delegation plugin).
 # Verifies the agy CLI is installed + authenticated and the plugin is wired up
 # (scripts executable).
 #
@@ -71,15 +71,15 @@ if command -v agy >/dev/null 2>&1; then
     ok "agy authenticated — $(printf '%s' "$MODELS" | grep -c . ) models available"
     # 2b. configured tier->model names exist (respecting env remaps). agy is
     # multi-model and plan-dependent, so a miss is a WARNING, not a failure.
-    LOW="${AGY_CODEX_TIER_LOW:-Gemini 3.5 Flash (Low)}"
-    MEDIUM="${AGY_CODEX_TIER_MEDIUM:-Gemini 3.5 Flash (Medium)}"
-    HIGH="${AGY_CODEX_TIER_HIGH:-Gemini 3.5 Flash (High)}"
+    LOW="${AGY_TIER_LOW:-Gemini 3.5 Flash (Low)}"
+    MEDIUM="${AGY_TIER_MEDIUM:-Gemini 3.5 Flash (Medium)}"
+    HIGH="${AGY_TIER_HIGH:-Gemini 3.5 Flash (High)}"
     for m in "$LOW" "$MEDIUM" "$HIGH"; do
       if printf '%s' "$MODELS" | grep -qF "$m"; then
         ok "tier model present: $m"
       else
         warn "tier model not in 'agy models': $m"
-        info "agy is multi-model/plan-dependent — remap tiers via AGY_CODEX_TIER_* (or set AGY_CODEX_DEFAULT_MODEL), or pass --model <name from \`agy models\`)"
+        info "agy is multi-model/plan-dependent — remap tiers via AGY_TIER_* (or set AGY_DEFAULT_MODEL), or pass --model <name from \`agy models\`)"
       fi
     done
   elif [ "$AGY_TIMED_OUT" -eq 0 ]; then

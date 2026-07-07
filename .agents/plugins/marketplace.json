@@ -1,11 +1,11 @@
 {
-  "name": "agy-plugin-codex",
+  "name": "agy-plugin",
   "interface": {
-    "displayName": "Antigravity for Codex"
+    "displayName": "Antigravity (agy) delegation"
   },
   "plugins": [
     {
-      "name": "agy-plugin-codex",
+      "name": "agy-plugin",
       "source": {
         "source": "local",
         "path": "./"

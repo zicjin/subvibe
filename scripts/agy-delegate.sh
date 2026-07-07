@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # agy-delegate.sh — robust headless wrapper around the Antigravity CLI (`agy`).
-# Part of the "agy-plugin-codex" project (Antigravity for Codex).
+# Part of the "agy-plugin" project (Antigravity delegation plugin for Codex / Claude Code).
 #
 # Purpose: let Codex (the orchestrator) hand a single, well-scoped subtask
 # to an Antigravity (Gemini) agent via `agy --print`, and get clean text back on
@@ -41,13 +41,13 @@
 #
 # agy is multi-model: tiers map to Gemini Flash thinking levels by default, but you can
 # point delegation at any model `agy models` lists (e.g. Claude/GPT on plans that expose
-# them). Defaults via env: AGY_CODEX_DEFAULT_TIER, _TIMEOUT, _DEFAULT_MODEL (exact name),
+# them). Defaults via env: AGY_DEFAULT_TIER, _TIMEOUT, _DEFAULT_MODEL (exact name),
 # and per-tier remaps _TIER_LOW / _TIER_MEDIUM / _TIER_HIGH. Explicit --model/--tier win.
 #
 set -euo pipefail
 
-TIER="${AGY_CODEX_DEFAULT_TIER:-medium}"
-TIMEOUT="${AGY_CODEX_TIMEOUT:-5m}"
+TIER="${AGY_DEFAULT_TIER:-medium}"
+TIMEOUT="${AGY_TIMEOUT:-5m}"
 TIER_EXPLICIT=0
 MODEL=""
 YOLO=0
@@ -82,12 +82,12 @@ usage() { sed -n '/^# Usage:/,/^# Exit codes:/p' "$0" | sed 's/^# \{0,1\}//'; ex
 # --- map a tier to an exact agy model name (see `agy models`) ---
 # Defaults are Gemini, but each tier is remappable to any agy model via env vars,
 # so non-Vertex/non-Gemini plans (Claude/GPT) work without code changes.
-# Legacy CLAUDE_PLUGIN_OPTION_* names are not read — use AGY_CODEX_*.
+# Legacy CLAUDE_PLUGIN_OPTION_* names are not read — use AGY_*.
 model_for_tier() {
   case "$1" in
-    low)    echo "${AGY_CODEX_TIER_LOW:-Gemini 3.5 Flash (Low)}" ;;
-    medium) echo "${AGY_CODEX_TIER_MEDIUM:-Gemini 3.5 Flash (Medium)}" ;;
-    high)   echo "${AGY_CODEX_TIER_HIGH:-Gemini 3.5 Flash (High)}" ;;
+    low)    echo "${AGY_TIER_LOW:-Gemini 3.5 Flash (Low)}" ;;
+    medium) echo "${AGY_TIER_MEDIUM:-Gemini 3.5 Flash (Medium)}" ;;
+    high)   echo "${AGY_TIER_HIGH:-Gemini 3.5 Flash (High)}" ;;
     *) die "unknown tier '$1' (use low | medium | high)" ;;
   esac
 }
@@ -169,13 +169,13 @@ fi
 if [ -z "$MODEL" ]; then
   if [ "$TIER_EXPLICIT" -eq 1 ]; then
     MODEL="$(model_for_tier "$TIER")"
-  elif [ -n "${AGY_CODEX_DEFAULT_MODEL:-}" ]; then
-    MODEL="$AGY_CODEX_DEFAULT_MODEL"
+  elif [ -n "${AGY_DEFAULT_MODEL:-}" ]; then
+    MODEL="$AGY_DEFAULT_MODEL"
   else
     # default tier from userConfig; a bad value shouldn't make every call die.
     case "$TIER" in
       low|medium|high) ;;
-      *) echo "agy-delegate: invalid default tier '$TIER' (set AGY_CODEX_DEFAULT_TIER to low|medium|high); using medium" >&2; TIER="medium" ;;
+      *) echo "agy-delegate: invalid default tier '$TIER' (set AGY_DEFAULT_TIER to low|medium|high); using medium" >&2; TIER="medium" ;;
     esac
     MODEL="$(model_for_tier "$TIER")"
   fi
@@ -302,12 +302,12 @@ fi
 
 # Digest-size guard: the cost saving depends on the conductor ingesting a DIGEST,
 # not a raw dump — if the reply is dump-sized, say so on stderr (advisory only;
-# stdout passes through untouched). Tune via env AGY_CODEX_DIGEST_WARN_CHARS
+# stdout passes through untouched). Tune via env AGY_DIGEST_WARN_CHARS
 # (empty = 8000, 0 = off).
-WARN_CHARS="${AGY_CODEX_DIGEST_WARN_CHARS:-8000}"
+WARN_CHARS="${AGY_DIGEST_WARN_CHARS:-8000}"
 case "$WARN_CHARS" in (*[!0-9]*|'') WARN_CHARS=8000 ;; esac
 if [ "$WARN_CHARS" -gt 0 ] && [ "${#OUT}" -gt "$WARN_CHARS" ]; then
-  echo "agy-delegate: note: output is ${#OUT} chars (> ${WARN_CHARS}) — that looks like a raw dump, not a digest. Don't ingest this into the conductor's context: re-run with --digest, or have agy summarize it first. (env AGY_CODEX_DIGEST_WARN_CHARS tunes this; 0 disables.)" >&2
+  echo "agy-delegate: note: output is ${#OUT} chars (> ${WARN_CHARS}) — that looks like a raw dump, not a digest. Don't ingest this into the conductor's context: re-run with --digest, or have agy summarize it first. (env AGY_DIGEST_WARN_CHARS tunes this; 0 disables.)" >&2
 fi
 
 printf '%s\n' "$OUT"

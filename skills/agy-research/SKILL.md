@@ -1,11 +1,11 @@
 ---
 name: agy-research
-description: Codex-orchestrated deep research — Antigravity (agy / Gemini) does the grounded web legwork cheaply; Codex plans, verifies the citations, and synthesizes. Use for multi-source research questions that need cited findings.
+description: Conductor-orchestrated deep research — Antigravity (agy / Gemini) does the grounded web legwork cheaply; the conductor agent plans, verifies the citations, and synthesizes. Use for multi-source research questions that need cited findings.
 ---
 
 Run a multi-source research pass, following the **Verification gates** of the
 plugin's delegation policy. Antigravity (`agy` / Gemini) is the cheap, grounded
-search worker; **you (Codex) own the plan, the verification, and the synthesis**.
+search worker; **you (the conductor) own the plan, the verification, and the synthesis**.
 agy's print-mode citations are coarse (often domain-level) and it can present
 parametric "knowledge" as a sourced fact — so never ship its citations unchecked.
 
@@ -34,4 +34,4 @@ Keep your own context lean — ingest agy's bullet digests, not the raw pages (t
 where the cost savings come from). `--print` does one agentic pass per call, so
 re-dispatch follow-up agy calls to close gaps rather than expecting it to
 auto-iterate. In an interactive session a long fetch can be backgrounded with
-`agy-job`; when **you** are headless (`codex exec`), delegate synchronously.
+`agy-job`; when **you** are headless (`codex exec` / `claude -p`), delegate synchronously.
