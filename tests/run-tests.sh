@@ -95,32 +95,32 @@ else
 fi
 
 # env default tier; explicit --tier still wins
-out=$(STUB_MODE=args AGY_CODEX_DEFAULT_TIER=high "$DELEGATE" "hi" 2>/dev/null); rc=$?
-check "AGY_CODEX_DEFAULT_TIER=high -> Flash High" 0 "$rc" "Gemini 3.5 Flash (High)" "$out"
+out=$(STUB_MODE=args AGY_DEFAULT_TIER=high "$DELEGATE" "hi" 2>/dev/null); rc=$?
+check "AGY_DEFAULT_TIER=high -> Flash High" 0 "$rc" "Gemini 3.5 Flash (High)" "$out"
 
-out=$(STUB_MODE=args AGY_CODEX_DEFAULT_TIER=high "$DELEGATE" --tier low "hi" 2>/dev/null); rc=$?
+out=$(STUB_MODE=args AGY_DEFAULT_TIER=high "$DELEGATE" --tier low "hi" 2>/dev/null); rc=$?
 check "explicit --tier overrides env default" 0 "$rc" "Gemini 3.5 Flash (Low)" "$out"
 
 # multi-model: default_model + per-tier remap (agy supports Claude/GPT on some plans)
-out=$(STUB_MODE=args AGY_CODEX_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" "hi" 2>/dev/null); rc=$?
-check "AGY_CODEX_DEFAULT_MODEL -> used as-is" 0 "$rc" "Claude Sonnet 4.5" "$out"
-out=$(STUB_MODE=args AGY_CODEX_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" --tier high "hi" 2>/dev/null); rc=$?
+out=$(STUB_MODE=args AGY_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" "hi" 2>/dev/null); rc=$?
+check "AGY_DEFAULT_MODEL -> used as-is" 0 "$rc" "Claude Sonnet 4.5" "$out"
+out=$(STUB_MODE=args AGY_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" --tier high "hi" 2>/dev/null); rc=$?
 check "explicit --tier beats default model" 0 "$rc" "Gemini 3.5 Flash (High)" "$out"
-out=$(STUB_MODE=args AGY_CODEX_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" -m "GPT-X" "hi" 2>/dev/null); rc=$?
+out=$(STUB_MODE=args AGY_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" -m "GPT-X" "hi" 2>/dev/null); rc=$?
 check "explicit --model beats default model" 0 "$rc" "GPT-X" "$out"
-out=$(STUB_MODE=args AGY_CODEX_TIER_MEDIUM="Claude Sonnet 4.5" "$DELEGATE" --tier medium "hi" 2>/dev/null); rc=$?
-check "AGY_CODEX_TIER_MEDIUM remap -> medium uses remapped model" 0 "$rc" "Claude Sonnet 4.5" "$out"
+out=$(STUB_MODE=args AGY_TIER_MEDIUM="Claude Sonnet 4.5" "$DELEGATE" --tier medium "hi" 2>/dev/null); rc=$?
+check "AGY_TIER_MEDIUM remap -> medium uses remapped model" 0 "$rc" "Claude Sonnet 4.5" "$out"
 
 # default + env timeout, with explicit flag winning
 out=$(STUB_MODE=args "$DELEGATE" "hi" 2>/dev/null); rc=$?
 check "default timeout -> --print-timeout 5m" 0 "$rc" "--print-timeout 5m" "$out"
-out=$(STUB_MODE=args AGY_CODEX_TIMEOUT=9m "$DELEGATE" "hi" 2>/dev/null); rc=$?
-check "AGY_CODEX_TIMEOUT=9m -> --print-timeout 9m" 0 "$rc" "--print-timeout 9m" "$out"
-out=$(STUB_MODE=args AGY_CODEX_TIMEOUT=9m "$DELEGATE" --timeout 3m "hi" 2>/dev/null); rc=$?
+out=$(STUB_MODE=args AGY_TIMEOUT=9m "$DELEGATE" "hi" 2>/dev/null); rc=$?
+check "AGY_TIMEOUT=9m -> --print-timeout 9m" 0 "$rc" "--print-timeout 9m" "$out"
+out=$(STUB_MODE=args AGY_TIMEOUT=9m "$DELEGATE" --timeout 3m "hi" 2>/dev/null); rc=$?
 check "explicit --timeout overrides env" 0 "$rc" "--print-timeout 3m" "$out"
 
 # invalid default tier from env falls back to medium; explicit --tier typo still errors
-out=$(STUB_MODE=args AGY_CODEX_DEFAULT_TIER=bogus "$DELEGATE" "hi" 2>/dev/null); rc=$?
+out=$(STUB_MODE=args AGY_DEFAULT_TIER=bogus "$DELEGATE" "hi" 2>/dev/null); rc=$?
 check "invalid env tier -> falls back to medium" 0 "$rc" "Gemini 3.5 Flash (Medium)" "$out"
 out=$("$DELEGATE" --tier bogus "hi" 2>/dev/null); rc=$?
 check "explicit --tier bogus -> exit 1" 1 "$rc"
@@ -158,11 +158,11 @@ check "dump-sized output -> raw-dump note on stderr" 0 "$rc" "raw dump" "$out"
 out=$(STUB_MODE=text "$DELEGATE" "hi" 2>&1 >/dev/null)
 if printf '%s' "$out" | grep -q "raw dump"; then echo "FAIL: digest guard fired on a small reply"; FAIL=$((FAIL+1));
 else echo "ok: digest guard silent on a small reply"; PASS=$((PASS+1)); fi
-out=$(STUB_MODE=big AGY_CODEX_DIGEST_WARN_CHARS=0 "$DELEGATE" "hi" 2>&1 >/dev/null)
-if printf '%s' "$out" | grep -q "raw dump"; then echo "FAIL: digest guard fired with AGY_CODEX_DIGEST_WARN_CHARS=0"; FAIL=$((FAIL+1));
-else echo "ok: AGY_CODEX_DIGEST_WARN_CHARS=0 disables the guard"; PASS=$((PASS+1)); fi
-out=$(STUB_MODE=text AGY_CODEX_DIGEST_WARN_CHARS=5 "$DELEGATE" "hi" 2>&1 >/dev/null); rc=$?
-check "custom AGY_CODEX_DIGEST_WARN_CHARS threshold respected" 0 "$rc" "raw dump" "$out"
+out=$(STUB_MODE=big AGY_DIGEST_WARN_CHARS=0 "$DELEGATE" "hi" 2>&1 >/dev/null)
+if printf '%s' "$out" | grep -q "raw dump"; then echo "FAIL: digest guard fired with AGY_DIGEST_WARN_CHARS=0"; FAIL=$((FAIL+1));
+else echo "ok: AGY_DIGEST_WARN_CHARS=0 disables the guard"; PASS=$((PASS+1)); fi
+out=$(STUB_MODE=text AGY_DIGEST_WARN_CHARS=5 "$DELEGATE" "hi" 2>&1 >/dev/null); rc=$?
+check "custom AGY_DIGEST_WARN_CHARS threshold respected" 0 "$rc" "raw dump" "$out"
 
 # WSL slow-mount note: fires only under WSL AND when --add-dir is on /mnt/*
 out=$(WSL_DISTRO_NAME=Ubuntu "$DELEGATE" --dir /mnt/c/proj --print-command "hi" 2>&1); rc=$?
@@ -199,7 +199,7 @@ out=$(py_ok <<'PY'
 import json, os, sys
 root = os.environ["ROOT"]
 m = json.load(open(os.path.join(root, ".codex-plugin", "plugin.json")))
-assert m["name"] == "agy-plugin-codex", "manifest name"
+assert m["name"] == "agy-plugin", "manifest name"
 assert m["version"], "manifest version"
 for f in ("skills", "hooks"):
     p = m[f]
@@ -215,7 +215,7 @@ import json, os
 root = os.environ["ROOT"]
 m = json.load(open(os.path.join(root, ".agents", "plugins", "marketplace.json")))
 e = m["plugins"][0]
-assert e["name"] == "agy-plugin-codex"
+assert e["name"] == "agy-plugin"
 p = e["source"]["path"]
 assert p.startswith("./")
 assert os.path.exists(os.path.join(root, p, ".codex-plugin", "plugin.json")), "source.path has no manifest"
@@ -235,6 +235,28 @@ print("HOOKS_OK")
 PY
 ); rc=$?
 check "hooks.json valid SessionStart hook" 0 "$rc" "HOOKS_OK" "$out"
+
+out=$(py_ok <<'PY'
+import json, os
+root = os.environ["ROOT"]
+m = json.load(open(os.path.join(root, ".claude-plugin", "plugin.json")))
+assert m["name"] == "agy-plugin", "claude manifest name"
+assert m["version"], "claude manifest version"
+hp = m["hooks"]
+assert hp.startswith("./") and os.path.exists(os.path.join(root, hp)), "claude hooks path"
+h = json.load(open(os.path.join(root, hp)))
+matchers = [g["matcher"] for g in h["hooks"]["SessionStart"]]
+assert "startup" in matchers and "compact" in matchers, "startup+compact matchers"
+for g in h["hooks"]["SessionStart"]:
+    cmd = g["hooks"][0]["command"]
+    assert "AGENTS-snippet.md" in cmd and "${CLAUDE_PLUGIN_ROOT}" in cmd
+mk = json.load(open(os.path.join(root, ".claude-plugin", "marketplace.json")))
+e = mk["plugins"][0]
+assert e["name"] == "agy-plugin" and e["source"] == "./"
+print("CLAUDE_OK")
+PY
+); rc=$?
+check "claude plugin manifest + hooks + marketplace valid" 0 "$rc" "CLAUDE_OK" "$out"
 
 for skill in agy-delegate agy-review agy-research agy-jobs agy-setup agy-prompting; do
   f="$ROOT/skills/$skill/SKILL.md"

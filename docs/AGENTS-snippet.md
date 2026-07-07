@@ -1,15 +1,14 @@
 <!--
-Paste this section into the AGENTS.md of any repo where Codex should use
-Antigravity (agy) as a subagent. Codex reads AGENTS.md automatically, so this
-is the Codex equivalent of the Claude Code plugin's skill + SessionStart policy
-injection. agy also reads the same AGENTS.md — one shared harness for both AIs.
+Injected as session context by the plugin's SessionStart hook (Codex and Claude
+Code). Can also be pasted into a repo's AGENTS.md / CLAUDE.md directly — agy
+reads the same AGENTS.md, one shared harness for all the AIs involved.
 -->
 
 ## Antigravity delegation (agy as subagent)
 
-You (Codex) can delegate work to the **Antigravity CLI (`agy`, Gemini)** — a full
+You (the conductor agent) can delegate work to the **Antigravity CLI (`agy`, Gemini)** — a full
 terminal agent (file edits, terminal, subagents, web/Vertex AI Search) — via the
-`agy-delegate` wrapper (from agy-plugin-codex; `agy-job` for background jobs,
+`agy-delegate` wrapper (from agy-plugin; `agy-job` for background jobs,
 `agy-doctor` for health checks — these are `scripts/agy-delegate.sh`,
 `scripts/agy-job.sh`, and `scripts/doctor.sh` in the installed plugin, invoked by
 path). The organizing idea is **intelligent model routing
@@ -28,19 +27,19 @@ ID=$(agy-job start --tier high --dir . "big task"); agy-job result "$ID"   # bac
 ```
 
 - Tiers are Gemini Flash thinking levels: `medium` (default, bulk) · `low` (cheapest,
-  trivial) · `high` (harder reasoning / reviews / cross-checks). Remap via env `AGY_CODEX_TIER_*`,
-  `AGY_CODEX_DEFAULT_MODEL`, or pass `--model "<exact name from agy models>"` — keep
+  trivial) · `high` (harder reasoning / reviews / cross-checks). Remap via env `AGY_TIER_*`,
+  `AGY_DEFAULT_MODEL`, or pass `--model "<exact name from agy models>"` — keep
   the executor a *different, cheaper* model than you.
 - **Always pass `--dir <repo-root>` for repo work** so agy loads AGENTS.md and the real
   code instead of you pasting files into the prompt.
 - **Write tasks MUST pass `--yolo`** — without it, headless agy only *describes* edits
   and returns a confident "done" **while writing nothing**. Run writes on a dedicated
-  branch, prefer `--sandbox`, and review the diff before merging. Codex's own sandbox
+  branch, prefer `--sandbox`, and review the diff before merging. Your own sandbox
   may require approval to run the command with network/write access.
 - Structured failures: exit `10` quota · `11` auth · `12` timeout · `13` agy missing
   (plus `2` failed / `3` empty), with an `AGY_SIGNAL {...}` line on stderr — react to
   the code (e.g. retry quota with `--continue`) instead of scraping prose.
-- **Headless (`codex exec`)?** Delegate **synchronously** — never background a
+- **Headless (`codex exec` / `claude -p`)?** Delegate **synchronously** — never background a
   delegation expecting a later turn to collect it.
 
 ### Cost discipline (where the savings come from)

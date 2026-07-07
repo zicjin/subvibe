@@ -18,10 +18,10 @@ Do this:
    **If the task WRITES files or uses tools** (implement / scaffold / test-gen /
    migrate / fix, or web / Vertex AI Search) **add `--yolo`** — without it, agy only
    *describes* the edits and returns a confident "done" **while writing nothing**.
-   Run write tasks on a dedicated branch (+ `--sandbox`). Codex's sandbox may block
+   Run write tasks on a dedicated branch (+ `--sandbox`). Your own sandbox may block
    the command — if the shell call is denied, request approval / escalated
    permissions for `agy-delegate`.
-2. Run **synchronously** (you may be headless `codex exec` — do not
+2. Run **synchronously** (you may be headless — `codex exec` / `claude -p` — do not
    background-and-wait):
    `agy-delegate --tier <tier> [--dir .] [--yolo] [--digest] "<task>"`
    For read/analysis tasks, add `--digest` — it appends a digest-only output
@@ -51,5 +51,5 @@ yourself.
 time limit — start it in the background and keep working:
 `ID=$(agy-job start --tier high --dir . "<task>")`
 then check with `agy-job status "$ID"` and collect with `agy-job result "$ID"`
-(see the `agy-jobs` skill). Don't do this when YOU are headless `codex exec` —
+(see the `agy-jobs` skill). Don't do this when YOU are headless (`codex exec` / `claude -p`) —
 one-shot, no later turn to collect; delegate synchronously there.

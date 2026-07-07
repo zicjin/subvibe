@@ -1,27 +1,27 @@
 <div align="center">
 
-# 🛰️ Antigravity for Codex (`agy-plugin-codex`)
+# 🛰️ Antigravity delegation plugin (`agy-plugin`)
 
-**Run the Antigravity CLI (Gemini) as a collaborating sub-agent, right inside OpenAI Codex.**
+**Run the Antigravity CLI (Gemini) as a collaborating sub-agent, right inside OpenAI Codex or Claude Code.**
 
-Codex conducts the judgement; Gemini does the heavy lifting — intelligent model routing across the SDLC.
+Your agent conducts the judgement; Gemini does the heavy lifting — intelligent model routing across the SDLC.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Antigravity CLI](https://img.shields.io/badge/Antigravity%20CLI-agy-4285F4?logo=googlegemini&logoColor=white)](https://antigravity.google/docs/cli-using)
 
 </div>
 
-A Codex port of [antigravity-for-claude-code](https://github.com/yuting0624/antigravity-for-claude-code): the same robust `agy` delegation wrapper, background jobs, and routing/cost discipline — packaged as an official [Codex plugin](https://developers.openai.com/codex/plugins) (skills + a SessionStart policy hook).
+Grown out of [antigravity-for-claude-code](https://github.com/yuting0624/antigravity-for-claude-code): the same robust `agy` delegation wrapper, background jobs, and routing/cost discipline — packaged as a dual-platform plugin: an official [Codex plugin](https://developers.openai.com/codex/plugins) **and** a [Claude Code plugin](https://code.claude.com/docs/en/plugins) from the same repo (shared skills, scripts, and a SessionStart policy hook per platform).
 
 ## 💡 Why
 
-| | Codex (conductor) | Gemini / `agy` (executor) |
+| | Codex / Claude (conductor) | Gemini / `agy` (executor) |
 |---|---|---|
 | **Owns** | requirements · architecture · the hard 20% · **verification** · review | scaffold · implementation · test generation · search |
 | **Strength** | judgement | cheap, fast throughput |
 
 ```
-you → Codex (conduct: design / verify / review)
+you → Codex / Claude Code (conduct: design / verify / review)
          └── agy → Gemini (execute: implement / test / search)
 ```
 
@@ -29,8 +29,8 @@ you → Codex (conduct: design / verify / review)
 
 ## ✨ What it does
 
-- **Routes work across the SDLC** — Codex keeps the judgement calls; Antigravity handles scaffolding, test generation, first-pass review, and migrations under a shared `AGENTS.md`.
-- **Adds tools Codex may lack** — live Google/web search, Vertex AI Search over your internal data, deep research. Codex reviews and re-checks the results.
+- **Routes work across the SDLC** — the conductor keeps the judgement calls; Antigravity handles scaffolding, test generation, first-pass review, and migrations under a shared `AGENTS.md`.
+- **Adds tools your agent may lack** — live Google/web search, Vertex AI Search over your internal data, deep research. The conductor reviews and re-checks the results.
 - **Cross-model verification** — an independent, different-model opinion on your code (`git diff | agy-delegate --tier high -`).
 - **Background jobs** — fire a long delegation with `agy-job`, keep working, collect later.
 - **Built-in cost discipline** — `--digest` output contracts, dump-size warnings, break-even guidance baked into the skills and the policy snippet.
@@ -38,37 +38,48 @@ you → Codex (conduct: design / verify / review)
 
 ## 🚀 Install
 
+### Codex
+
 ```bash
-codex plugin marketplace add zicjin/agy-plugin-codex
+codex plugin marketplace add zicjin/agy-plugin
 ```
 
-Then inside Codex run `/plugins`, pick the **Antigravity for Codex** marketplace, and install **agy-plugin-codex**. This gives you:
+Then inside Codex run `/plugins`, pick the **Antigravity (agy) delegation** marketplace, and install **agy-plugin**.
 
-- **Skills** — `$agy-delegate`, `$agy-review`, `$agy-research`, `$agy-jobs`, `$agy-setup` (type `$` or run `/skills`; Codex can also pick them implicitly when a task matches).
-- **SessionStart hook** — injects the routing policy + verification gates (`docs/AGENTS-snippet.md`) as developer context in every session, so Codex delegates **proactively** without you editing each repo's `AGENTS.md`. Plugin hooks aren't trusted automatically — Codex asks you to review and trust the hook once.
+### Claude Code
 
-The skills call the bundled `scripts/*.sh` by path — no PATH setup needed. Verify with `$agy-setup` inside Codex (or run the plugin's `scripts/doctor.sh` directly).
+```
+/plugin marketplace add zicjin/agy-plugin
+/plugin install agy-plugin@agy-plugin
+```
 
-**Prerequisites:** the [Antigravity CLI](https://antigravity.google/docs/cli-using) (`agy`) installed & authenticated (`agy models` lists Gemini models), and [Codex CLI](https://github.com/openai/codex).
+Both give you:
 
-**Platform support:** macOS, Linux, and WSL. Native Windows (Git Bash/MSYS) is not recommended — headless `agy -p` can hang without a real console (ConPTY); the wrapper bounds this with a wall-clock guard (GNU `timeout`/`gtimeout`) and `agy-doctor` distinguishes a hang from an auth failure.
+- **Skills** — `agy-delegate`, `agy-review`, `agy-research`, `agy-jobs`, `agy-setup` (Codex: type `$` or run `/skills`; Claude Code: picked automatically or via `/skill`; both can also pick them implicitly when a task matches).
+- **SessionStart hook** — injects the routing policy + verification gates (`docs/AGENTS-snippet.md`) as session context in every session, so your agent delegates **proactively** without you editing each repo's `AGENTS.md`. Plugin hooks aren't trusted automatically — you review and trust the hook once on install.
 
-**Codex sandbox note:** in Codex's default sandbox, `agy` needs network access, so the delegation command may require approval. Approve it when prompted, or run Codex with a policy that allows it (e.g. `--sandbox danger-full-access` in a trusted environment, or add an approval rule for `agy-delegate`).
+The skills call the bundled `scripts/*.sh` by path — no PATH setup needed. Verify with the `agy-setup` skill (or run the plugin's `scripts/doctor.sh` directly).
+
+**Prerequisites:** the [Antigravity CLI](https://antigravity.google/docs/cli-using) (`agy`) installed & authenticated (`agy models` lists Gemini models), and [Codex CLI](https://github.com/openai/codex) or [Claude Code](https://code.claude.com/docs).
+
+**Platform support:** macOS, Linux, and WSL. Native Windows (Git Bash/MSYS) is not recommended — headless `agy -p` can hang without a real console (ConPTY); the wrapper bounds this with a wall-clock guard (GNU `timeout`/`gtimeout`) and the doctor script distinguishes a hang from an auth failure.
+
+**Sandbox note:** in the agent's default sandbox, `agy` needs network access, so the delegation command may require approval. Approve it when prompted, or run with a policy that allows it (e.g. Codex `--sandbox danger-full-access` in a trusted environment, or an allow rule for the delegation command).
 
 ## 🧩 Skills
 
 | skill | what it does |
 |---|---|
-| `$agy-setup` | health check — `agy` installed + authenticated, wiring OK |
-| `$agy-delegate` | delegate a subtask to agy under cost discipline, then verify |
-| `$agy-review` | independent cross-model review of the current diff (`--adversarial` style on request); Codex reconciles |
-| `$agy-research` | Codex-orchestrated deep research — agy does grounded web legwork, Codex verifies citations across ≥2 sources |
-| `$agy-jobs` | manage background delegation jobs (list / status / result / cancel) |
-| `$agy-prompting` | internal: how to compose operator-style prompt contracts for agy (XML blocks, output contracts, `--continue` delta follow-ups) |
+| `agy-setup` | health check — `agy` installed + authenticated, wiring OK |
+| `agy-delegate` | delegate a subtask to agy under cost discipline, then verify |
+| `agy-review` | independent cross-model review of the current diff (adversarial style on request); the conductor reconciles |
+| `agy-research` | conductor-orchestrated deep research — agy does grounded web legwork, the conductor verifies citations across ≥2 sources |
+| `agy-jobs` | manage background delegation jobs (list / status / result / cancel) |
+| `agy-prompting` | internal: how to compose operator-style prompt contracts for agy (XML blocks, output contracts, `--continue` delta follow-ups) |
 
-Reviews are **review-only**: findings are reported and never auto-fixed — Codex asks which findings you want addressed. Adversarial reviews use a ready-made prompt contract (`docs/adversarial-review-prompt.md`, adapted from OpenAI's [codex-plugin-cc](https://github.com/openai/codex-plugin-cc)) that pressure-tests design choices, failure modes, and assumptions, and returns a `VERDICT:` line with severity-ordered, confidence-scored findings.
+Reviews are **review-only**: findings are reported and never auto-fixed — the conductor asks which findings you want addressed. Adversarial reviews use a ready-made prompt contract (`docs/adversarial-review-prompt.md`, adapted from OpenAI's [codex-plugin-cc](https://github.com/openai/codex-plugin-cc)) that pressure-tests design choices, failure modes, and assumptions, and returns a `VERDICT:` line with severity-ordered, confidence-scored findings.
 
-> Background jobs are for **interactive** sessions (fire-and-collect). In headless `codex exec` (one-shot), delegate **synchronously** — there's no later turn to collect a result.
+> Background jobs are for **interactive** sessions (fire-and-collect). In headless one-shot runs (`codex exec` / `claude -p`), delegate **synchronously** — there's no later turn to collect a result.
 
 ## 🛠️ Direct script usage & tiers
 
@@ -96,7 +107,7 @@ ID=$(agy-job start --tier high --dir . "big task"); agy-job result "$ID"
 | `medium` (default) | Gemini 3.5 Flash (Medium) | most bulk work |
 | `high` | Gemini 3.5 Flash (High) | harder reasoning / reviews / cross-checks |
 
-**agy is multi-model.** Tiers default to Gemini Flash thinking levels, but you can use any model `agy models` lists: pass `--model "<exact name>"`, or set it persistently via environment variables — `AGY_CODEX_DEFAULT_MODEL`, or per-tier `AGY_CODEX_TIER_LOW` / `AGY_CODEX_TIER_MEDIUM` / `AGY_CODEX_TIER_HIGH`. Other knobs: `AGY_CODEX_DEFAULT_TIER`, `AGY_CODEX_TIMEOUT`, `AGY_CODEX_DIGEST_WARN_CHARS`. Keep the executor a *different, cheaper* model than the Codex conductor — that's what gives both the cost saving and the cross-model verification.
+**agy is multi-model.** Tiers default to Gemini Flash thinking levels, but you can use any model `agy models` lists: pass `--model "<exact name>"`, or set it persistently via environment variables — `AGY_DEFAULT_MODEL`, or per-tier `AGY_TIER_LOW` / `AGY_TIER_MEDIUM` / `AGY_TIER_HIGH`. Other knobs: `AGY_DEFAULT_TIER`, `AGY_TIMEOUT`, `AGY_DIGEST_WARN_CHARS`. Keep the executor a *different, cheaper* model than the conductor — that's what gives both the cost saving and the cross-model verification.
 
 ## 🚧 Guardrails & known limits
 
@@ -116,9 +127,12 @@ ID=$(agy-job start --tier high --dir . "big task"); agy-job result "$ID"
 
 ```
 .codex-plugin/plugin.json        Codex plugin manifest
-.agents/plugins/marketplace.json repo marketplace (codex plugin marketplace add zicjin/agy-plugin-codex)
-skills/                          plugin skills: agy-delegate, agy-review, agy-research, agy-jobs, agy-setup, agy-prompting
-hooks/hooks.json                 SessionStart hook — injects the delegation policy as session context
+.agents/plugins/marketplace.json Codex repo marketplace (codex plugin marketplace add zicjin/agy-plugin)
+.claude-plugin/plugin.json       Claude Code plugin manifest
+.claude-plugin/marketplace.json  Claude Code marketplace (/plugin marketplace add zicjin/agy-plugin)
+skills/                          shared plugin skills: agy-delegate, agy-review, agy-research, agy-jobs, agy-setup, agy-prompting
+hooks/hooks.json                 Codex SessionStart hook — injects the delegation policy as session context
+hooks/claude-hooks.json          Claude Code SessionStart hook (startup + compact) — same policy injection
 scripts/                         agy-delegate.sh · agy-job.sh · doctor.sh
 docs/AGENTS-snippet.md           the routing policy + verification gates (injected by the hook)
 docs/adversarial-review-prompt.md  XML prompt contract for adversarial reviews (prepend to a diff)
@@ -130,18 +144,19 @@ tests/                           dependency-free tests (stub agy); bash tests/ru
 bash tests/run-tests.sh
 ```
 
-## Differences from the Claude Code plugin
+## How the two platforms share one repo
 
-Codex now has its own plugin system, so most mechanisms map directly; the rest fall back to Codex-native equivalents:
+The core is platform-neutral — pure-bash scripts, open-format `SKILL.md` skills, and a plain-text policy snippet. Each platform gets a thin packaging shell:
 
-| Claude Code plugin | this project |
-|---|---|
-| `/plugin install` + marketplace manifest | `codex plugin marketplace add zicjin/agy-plugin-codex` (`.codex-plugin/plugin.json` + `.agents/plugins/marketplace.json`) |
-| slash commands (`commands/*.md`) | plugin skills (`skills/*/SKILL.md`, invoked with `$`) |
-| skill (`skills/antigravity/SKILL.md`) + SessionStart policy hook | plugin SessionStart hook injecting `docs/AGENTS-snippet.md` |
-| `antigravity-delegate` subagent | `$agy-delegate` skill + delegation policy (Codex has no subagent files) |
-| plugin `userConfig` (`CLAUDE_PLUGIN_OPTION_*` env) | plain env vars (`AGY_CODEX_*`) |
-| plugin `bin/` auto on PATH | skills invoke the bundled `scripts/*.sh` by path |
+| | Codex | Claude Code |
+|---|---|---|
+| manifest | `.codex-plugin/plugin.json` | `.claude-plugin/plugin.json` |
+| marketplace | `.agents/plugins/marketplace.json` | `.claude-plugin/marketplace.json` |
+| policy hook | `hooks/hooks.json` (SessionStart) | `hooks/claude-hooks.json` (SessionStart: startup + compact) |
+| skills | `skills/` (shared) | `skills/` (shared) |
+| scripts | `scripts/` (shared, invoked by path) | `scripts/` (shared, invoked by path) |
+
+Configuration is plain env vars (`AGY_*`) on both platforms.
 
 ## ⚠️ Disclaimer
 

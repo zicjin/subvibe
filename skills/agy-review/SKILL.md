@@ -22,7 +22,7 @@ Do this:
    session → run it as a background job and keep working (redirect the diff from a
    file, not a pipe — the job detaches):
    `git diff > /tmp/review.diff && ID=$(agy-job start --tier high - < /tmp/review.diff)`
-   then collect via `agy-job result "$ID"`. Headless `codex exec` → always
+   then collect via `agy-job result "$ID"`. Headless (`codex exec` / `claude -p`) → always
    synchronous.
 3. Delegate the review to agy (high tier) — pipe the diff in on stdin:
    - Normal review: `git diff | agy-delegate --tier high -` with an instruction to
