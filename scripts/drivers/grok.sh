@@ -1,8 +1,8 @@
 # shellcheck shell=bash
 #
-# drivers/grok.sh — Grok Build CLI (`grok`, x.ai/cli) driver for agy-delegate.sh.
+# drivers/grok.sh — Grok Build CLI (`grok`, x.ai/cli) driver for subvibe-delegate.sh.
 #
-# Sourced (not executed) by scripts/agy-delegate.sh. See docs/drivers.md for
+# Sourced (not executed) by scripts/subvibe-delegate.sh. See docs/drivers.md for
 # the driver interface. Select with `--driver grok` or `SUBVIBE_DRIVER=grok`.
 #
 # Flag mapping (verified against grok 0.2.93 `--help`):
@@ -55,7 +55,7 @@ driver_build_args() {
   for d in "${ADD_DIRS[@]:-}"; do
     [ -n "$d" ] || continue
     if [ -z "$first" ]; then first="$d"; else
-      echo "agy-delegate: note: grok supports one working dir (--cwd); ignoring extra --dir '$d'" >&2
+      echo "subvibe-delegate: note: grok supports one working dir (--cwd); ignoring extra --dir '$d'" >&2
     fi
   done
   [ -n "$first" ]       && DRIVER_ARGS+=(--cwd "$first")
@@ -93,7 +93,7 @@ driver_prompt_notes() {
     shopt -s nocasematch
     case "$PROMPT" in
       *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
-        echo "agy-delegate: note: this looks like a write task but --yolo is not set — headless grok has nobody to approve tool calls, so writes will stall or be denied. Add --yolo (and run on a branch) to actually write files." >&2 ;;
+        echo "subvibe-delegate: note: this looks like a write task but --yolo is not set — headless grok has nobody to approve tool calls, so writes will stall or be denied. Add --yolo (and run on a branch) to actually write files." >&2 ;;
     esac
     shopt -u nocasematch
   fi
@@ -101,13 +101,13 @@ driver_prompt_notes() {
 }
 
 driver_no_guard_warning() {
-  echo "agy-delegate: WARNING — no GNU \`timeout\`/\`gtimeout\` on PATH." >&2
-  echo "agy-delegate:   unauthenticated headless \`grok -p\` hangs instead of failing; without a" >&2
-  echo "agy-delegate:   wall-clock guard this call may never return. Install coreutils \`timeout\`." >&2
+  echo "subvibe-delegate: WARNING — no GNU \`timeout\`/\`gtimeout\` on PATH." >&2
+  echo "subvibe-delegate:   unauthenticated headless \`grok -p\` hangs instead of failing; without a" >&2
+  echo "subvibe-delegate:   wall-clock guard this call may never return. Install coreutils \`timeout\`." >&2
   return 0
 }
 
 driver_hang_hint() {
-  echo "agy-delegate:   grok hangs headless when not authenticated — run \`grok login\` (or set XAI_API_KEY) and retry." >&2
+  echo "subvibe-delegate:   grok hangs headless when not authenticated — run \`grok login\` (or set XAI_API_KEY) and retry." >&2
   return 0
 }

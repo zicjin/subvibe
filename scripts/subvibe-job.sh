@@ -1,25 +1,26 @@
 #!/usr/bin/env bash
 #
-# agy-job.sh — background-job layer over agy-delegate.sh.
-# For INTERACTIVE Codex sessions: fire a long delegation, keep working, then
-# poll status / fetch result. (Headless `codex exec` is one-shot — use the wrapper
-# synchronously there instead; there is no later turn to collect the result.)
+# subvibe-job.sh — background-job layer over subvibe-delegate.sh.
+# For INTERACTIVE Codex / Claude sessions: fire a long delegation, keep working,
+# then poll status / fetch result. (Headless `codex exec` / `claude -p` is
+# one-shot — use the wrapper synchronously there instead; there is no later
+# turn to collect the result.)
 #
 # Usage:
-#   agy-job.sh start  [agy-delegate options] "task"   # -> prints a JOB_ID, returns now
-#   agy-job.sh list                                    # jobs started from this dir
-#   agy-job.sh status <id>                             # running | done(rc) | failed
-#   agy-job.sh result <id>                             # print stdout (+rc) when finished
-#   agy-job.sh cancel <id>                             # terminate a running job
+#   subvibe-job.sh start  [subvibe-delegate options] "task"   # -> prints a JOB_ID, returns now
+#   subvibe-job.sh list                                        # jobs started from this dir
+#   subvibe-job.sh status <id>                                 # running | done(rc) | failed
+#   subvibe-job.sh result <id>                                 # print stdout (+rc) when finished
+#   subvibe-job.sh cancel <id>                                 # terminate a running job
 #
-# Jobs live under ${ANTIGRAVITY_JOBS:-~/.antigravity-jobs}/<id>/ (out, err, rc, meta).
+# Jobs live under ${SUBVIBE_JOBS:-~/.subvibe-jobs}/<id>/ (out, err, rc, meta).
 #
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-DELEGATE="${AGY_DELEGATE:-$HERE/agy-delegate.sh}"
-REG="${ANTIGRAVITY_JOBS:-$HOME/.antigravity-jobs}"
+DELEGATE="${SUBVIBE_DELEGATE:-$HERE/subvibe-delegate.sh}"
+REG="${SUBVIBE_JOBS:-$HOME/.subvibe-jobs}"
 
-die() { echo "agy-job: $*" >&2; exit 1; }
+die() { echo "subvibe-job: $*" >&2; exit 1; }
 
 # resolve a (possibly abbreviated) id to a job dir
 jobdir() {
@@ -45,16 +46,16 @@ job_state() {
   fi
 }
 
-# Human label for a delegate exit code (mirrors agy-delegate.sh structured codes).
+# Human label for a delegate exit code (mirrors subvibe-delegate.sh structured codes).
 rc_label() {
   case "$1" in
     0)  echo 'ok' ;;
-    2)  echo 'agy failed' ;;
+    2)  echo 'CLI failed' ;;
     3)  echo 'empty output' ;;
     10) echo 'QUOTA — retry later with --continue' ;;
-    11) echo 'AUTH required — run `agy` once interactively' ;;
+    11) echo 'AUTH required — authenticate the executor CLI' ;;
     12) echo 'TIMEOUT — raise --timeout or narrow scope' ;;
-    13) echo 'agy MISSING — install the Antigravity CLI' ;;
+    13) echo 'CLI MISSING — install the selected subagent CLI' ;;
     *)  echo 'error' ;;
   esac
 }
@@ -93,8 +94,8 @@ case "$cmd" in
     echo "job:    $(basename "$jd")"
     sed 's/^/  /' "$jd/meta" 2>/dev/null
     if [ -n "$rc" ]; then echo "  state=$st (rc=$rc: $(rc_label "$rc"))"; else echo "  state=$st"; fi
-    sig="$(grep -m1 '^AGY_SIGNAL ' "$jd/err" 2>/dev/null || true)"
-    if [ -n "$sig" ]; then echo "  signal=${sig#AGY_SIGNAL }"; fi
+    sig="$(grep -m1 '^SUBVIBE_SIGNAL ' "$jd/err" 2>/dev/null || true)"
+    if [ -n "$sig" ]; then echo "  signal=${sig#SUBVIBE_SIGNAL }"; fi
     ;;
   result)
     jd="$(jobdir "${1:-}")" || exit 1; st="$(job_state "$jd")"
@@ -108,7 +109,7 @@ case "$cmd" in
     jd="$(jobdir "${1:-}")" || exit 1
     pid="$(cat "$jd/pid" 2>/dev/null || true)"
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-      pkill -P "$pid" 2>/dev/null || true   # children (agy) first
+      pkill -P "$pid" 2>/dev/null || true   # children (executor CLI) first
       kill "$pid" 2>/dev/null || true
       echo "cancelled $(basename "$jd")"
     else

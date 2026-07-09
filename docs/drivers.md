@@ -1,28 +1,28 @@
 # Subagent CLI drivers
 
-`scripts/agy-delegate.sh` is split into a **CLI-agnostic core** and one
+`scripts/subvibe-delegate.sh` is split into a **CLI-agnostic core** and one
 **driver** per subagent CLI (`scripts/drivers/<name>.sh`). The core owns
 everything a conductor relies on regardless of which CLI executes the work;
 the driver owns everything specific to that CLI.
 
 | Layer | Owns |
 | --- | --- |
-| core (`agy-delegate.sh`) | arg parsing · tier resolution & precedence · `--digest` output contract · stdin detach · wall-clock hang guard · empty-output check · digest-size guard · structured exit codes · `AGY_SIGNAL` machine-readable failures |
+| core (`subvibe-delegate.sh`) | arg parsing · tier resolution & precedence · `--digest` output contract · stdin detach · wall-clock hang guard · empty-output check · digest-size guard · structured exit codes · `SUBVIBE_SIGNAL` machine-readable failures |
 | driver (`drivers/<name>.sh`) | binary name · tier → model names (+ env remaps) · flag mapping · stderr → error classification · CLI-specific quirks & warnings |
 
-The background-job layer (`agy-job.sh`) sits on top of the core and is
+The background-job layer (`subvibe-job.sh`) sits on top of the core and is
 driver-agnostic for free — it only consumes the core's exit codes and signals.
 
 ## Selecting a driver
 
 ```bash
-agy-delegate.sh --driver agy "task"   # per call
-export SUBVIBE_DRIVER=agy             # session/global default for all calls
+subvibe-delegate.sh --driver agy "task"   # per call
+export SUBVIBE_DRIVER=agy                 # session/global default for all calls
 ```
 
 The built-in default (used when neither `--driver` nor `SUBVIBE_DRIVER` is
 set) is `grok`, defined in one place: the `DRIVER="${SUBVIBE_DRIVER:-grok}"`
-line near the top of `scripts/agy-delegate.sh`.
+line near the top of `scripts/subvibe-delegate.sh`.
 
 Available drivers:
 
@@ -38,7 +38,7 @@ define:
 
 | Symbol | Contract |
 | --- | --- |
-| `DRIVER_BIN` | binary name looked up on PATH (missing → exit 13 + `AGY_MISSING` signal) |
+| `DRIVER_BIN` | binary name looked up on PATH (missing → exit 13 + `CLI_MISSING` signal) |
 | `DRIVER_INSTALL_HINT` | one-line install hint shown when the binary is missing |
 | `driver_model_for_tier <low\|medium\|high>` | echo the exact model name; return 1 on an unknown tier |
 | `driver_build_args` | fill `DRIVER_ARGS` (flags) and `DRIVER_PROMPT_ARGS` (prompt args, appended last) from the normalized inputs |
@@ -71,4 +71,4 @@ wrapped in a wall-clock `timeout` guard when available.
    its quota / auth / timeout stderr messages look like (for
    `driver_classify_error`).
 3. Keep quirk handling in the driver — the core must stay CLI-agnostic.
-4. Add stub-based tests in `tests/run-tests.sh` mirroring the agy ones.
+4. Add stub-based tests in `tests/run-tests.sh` mirroring the existing driver tests.

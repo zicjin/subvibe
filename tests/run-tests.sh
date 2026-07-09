@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 #
-# run-tests.sh — dependency-free tests (no bats). Stubs `agy` on PATH and asserts
-# agy-delegate.sh, agy-job.sh, and plugin packaging behavior.
+# run-tests.sh — dependency-free tests (no bats). Stubs executor CLIs on PATH
+# and asserts subvibe-delegate.sh, subvibe-job.sh, and plugin packaging behavior.
 #
 #   bash tests/run-tests.sh
 #
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
-DELEGATE="$ROOT/scripts/agy-delegate.sh"
-JOB="$ROOT/scripts/agy-job.sh"
+DELEGATE="$ROOT/scripts/subvibe-delegate.sh"
+JOB="$ROOT/scripts/subvibe-job.sh"
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 PASS=0; FAIL=0
@@ -42,7 +42,7 @@ check() { # desc  expected_rc  actual_rc  [substr]  [actual_out]
   echo "ok: $desc"; PASS=$((PASS+1))
 }
 
-echo "== agy-delegate.sh =="
+echo "== subvibe-delegate.sh =="
 # The shipped default driver is grok; this section exercises the CLI-agnostic
 # core through the agy driver, so pin it for these tests.
 export SUBVIBE_DRIVER=agy
@@ -51,10 +51,10 @@ out=$(STUB_MODE=text "$DELEGATE" "hello" 2>/dev/null); rc=$?
 check "normal text passes through" 0 "$rc" "STUB_OK" "$out"
 
 out=$(STUB_MODE=empty "$DELEGATE" "hello" 2>/dev/null); rc=$?
-check "empty agy output -> exit 3" 3 "$rc"
+check "empty executor output -> exit 3" 3 "$rc"
 
 out=$(STUB_MODE=fail "$DELEGATE" "hello" 2>/dev/null); rc=$?
-check "agy failure -> exit 2" 2 "$rc"
+check "executor failure -> exit 2" 2 "$rc"
 
 out=$("$DELEGATE" 2>/dev/null); rc=$?
 check "no prompt -> exit 1" 1 "$rc"
@@ -99,18 +99,18 @@ else
 fi
 
 # env default tier; explicit --tier still wins
-out=$(STUB_MODE=args AGY_DEFAULT_TIER=high "$DELEGATE" "hi" 2>/dev/null); rc=$?
-check "AGY_DEFAULT_TIER=high -> Flash High" 0 "$rc" "Gemini 3.5 Flash (High)" "$out"
+out=$(STUB_MODE=args SUBVIBE_DEFAULT_TIER=high "$DELEGATE" "hi" 2>/dev/null); rc=$?
+check "SUBVIBE_DEFAULT_TIER=high -> Flash High" 0 "$rc" "Gemini 3.5 Flash (High)" "$out"
 
-out=$(STUB_MODE=args AGY_DEFAULT_TIER=high "$DELEGATE" --tier low "hi" 2>/dev/null); rc=$?
+out=$(STUB_MODE=args SUBVIBE_DEFAULT_TIER=high "$DELEGATE" --tier low "hi" 2>/dev/null); rc=$?
 check "explicit --tier overrides env default" 0 "$rc" "Gemini 3.5 Flash (Low)" "$out"
 
 # multi-model: default_model + per-tier remap (agy supports Claude/GPT on some plans)
-out=$(STUB_MODE=args AGY_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" "hi" 2>/dev/null); rc=$?
-check "AGY_DEFAULT_MODEL -> used as-is" 0 "$rc" "Claude Sonnet 4.5" "$out"
-out=$(STUB_MODE=args AGY_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" --tier high "hi" 2>/dev/null); rc=$?
+out=$(STUB_MODE=args SUBVIBE_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" "hi" 2>/dev/null); rc=$?
+check "SUBVIBE_DEFAULT_MODEL -> used as-is" 0 "$rc" "Claude Sonnet 4.5" "$out"
+out=$(STUB_MODE=args SUBVIBE_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" --tier high "hi" 2>/dev/null); rc=$?
 check "explicit --tier beats default model" 0 "$rc" "Gemini 3.5 Flash (High)" "$out"
-out=$(STUB_MODE=args AGY_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" -m "GPT-X" "hi" 2>/dev/null); rc=$?
+out=$(STUB_MODE=args SUBVIBE_DEFAULT_MODEL="Claude Sonnet 4.5" "$DELEGATE" -m "GPT-X" "hi" 2>/dev/null); rc=$?
 check "explicit --model beats default model" 0 "$rc" "GPT-X" "$out"
 out=$(STUB_MODE=args AGY_TIER_MEDIUM="Claude Sonnet 4.5" "$DELEGATE" --tier medium "hi" 2>/dev/null); rc=$?
 check "AGY_TIER_MEDIUM remap -> medium uses remapped model" 0 "$rc" "Claude Sonnet 4.5" "$out"
@@ -118,13 +118,13 @@ check "AGY_TIER_MEDIUM remap -> medium uses remapped model" 0 "$rc" "Claude Sonn
 # default + env timeout, with explicit flag winning
 out=$(STUB_MODE=args "$DELEGATE" "hi" 2>/dev/null); rc=$?
 check "default timeout -> --print-timeout 5m" 0 "$rc" "--print-timeout 5m" "$out"
-out=$(STUB_MODE=args AGY_TIMEOUT=9m "$DELEGATE" "hi" 2>/dev/null); rc=$?
-check "AGY_TIMEOUT=9m -> --print-timeout 9m" 0 "$rc" "--print-timeout 9m" "$out"
-out=$(STUB_MODE=args AGY_TIMEOUT=9m "$DELEGATE" --timeout 3m "hi" 2>/dev/null); rc=$?
+out=$(STUB_MODE=args SUBVIBE_TIMEOUT=9m "$DELEGATE" "hi" 2>/dev/null); rc=$?
+check "SUBVIBE_TIMEOUT=9m -> --print-timeout 9m" 0 "$rc" "--print-timeout 9m" "$out"
+out=$(STUB_MODE=args SUBVIBE_TIMEOUT=9m "$DELEGATE" --timeout 3m "hi" 2>/dev/null); rc=$?
 check "explicit --timeout overrides env" 0 "$rc" "--print-timeout 3m" "$out"
 
 # invalid default tier from env falls back to medium; explicit --tier typo still errors
-out=$(STUB_MODE=args AGY_DEFAULT_TIER=bogus "$DELEGATE" "hi" 2>/dev/null); rc=$?
+out=$(STUB_MODE=args SUBVIBE_DEFAULT_TIER=bogus "$DELEGATE" "hi" 2>/dev/null); rc=$?
 check "invalid env tier -> falls back to medium" 0 "$rc" "Gemini 3.5 Flash (Medium)" "$out"
 out=$("$DELEGATE" --tier bogus "hi" 2>/dev/null); rc=$?
 check "explicit --tier bogus -> exit 1" 1 "$rc"
@@ -166,16 +166,16 @@ check "grok: auth stderr -> exit 11 + signal" 11 "$rc" "AUTH_REQUIRED" "$out"
 out=$(PATH="/usr/bin:/bin" "$DELEGATE" --driver grok "hi" 2>&1); rc=$?
 check "grok: missing binary -> exit 13 + install hint" 13 "$rc" "x.ai/cli/install.sh" "$out"
 
-# agy missing on PATH -> exit 13 + AGY_MISSING signal (PATH without the stub or real agy)
+# agy missing on PATH -> exit 13 + CLI_MISSING signal (PATH without the stub or real agy)
 out=$(PATH="/usr/bin:/bin" "$DELEGATE" "hi" 2>&1); rc=$?
-check "agy missing -> exit 13 + AGY_MISSING signal" 13 "$rc" "AGY_MISSING" "$out"
+check "agy missing -> exit 13 + CLI_MISSING signal" 13 "$rc" "CLI_MISSING" "$out"
 
-# --print-command: dry run prints the resolved agy invocation and exits 0 (agy not run)
+# --print-command: dry run prints the resolved invocation and exits 0 (CLI not run)
 out=$("$DELEGATE" --tier high --print-command "hi" 2>/dev/null); rc=$?
 check "--print-command -> exit 0 + resolved flags" 0 "$rc" "--print-timeout 5m" "$out"
 check "--print-command shows the tier model" 0 "$rc" "High" "$out"
 out=$(PATH="/usr/bin:/bin" "$DELEGATE" --print-command "hi" 2>/dev/null); rc=$?
-check "--print-command works without agy on PATH" 0 "$rc" "--print-timeout" "$out"
+check "--print-command works without executor on PATH" 0 "$rc" "--print-timeout" "$out"
 
 # write-task without --yolo -> warn (agy would only describe, not write)
 out=$(STUB_MODE=args "$DELEGATE" "implement the parser module" 2>&1); rc=$?
@@ -199,11 +199,11 @@ check "dump-sized output -> raw-dump note on stderr" 0 "$rc" "raw dump" "$out"
 out=$(STUB_MODE=text "$DELEGATE" "hi" 2>&1 >/dev/null)
 if printf '%s' "$out" | grep -q "raw dump"; then echo "FAIL: digest guard fired on a small reply"; FAIL=$((FAIL+1));
 else echo "ok: digest guard silent on a small reply"; PASS=$((PASS+1)); fi
-out=$(STUB_MODE=big AGY_DIGEST_WARN_CHARS=0 "$DELEGATE" "hi" 2>&1 >/dev/null)
-if printf '%s' "$out" | grep -q "raw dump"; then echo "FAIL: digest guard fired with AGY_DIGEST_WARN_CHARS=0"; FAIL=$((FAIL+1));
-else echo "ok: AGY_DIGEST_WARN_CHARS=0 disables the guard"; PASS=$((PASS+1)); fi
-out=$(STUB_MODE=text AGY_DIGEST_WARN_CHARS=5 "$DELEGATE" "hi" 2>&1 >/dev/null); rc=$?
-check "custom AGY_DIGEST_WARN_CHARS threshold respected" 0 "$rc" "raw dump" "$out"
+out=$(STUB_MODE=big SUBVIBE_DIGEST_WARN_CHARS=0 "$DELEGATE" "hi" 2>&1 >/dev/null)
+if printf '%s' "$out" | grep -q "raw dump"; then echo "FAIL: digest guard fired with SUBVIBE_DIGEST_WARN_CHARS=0"; FAIL=$((FAIL+1));
+else echo "ok: SUBVIBE_DIGEST_WARN_CHARS=0 disables the guard"; PASS=$((PASS+1)); fi
+out=$(STUB_MODE=text SUBVIBE_DIGEST_WARN_CHARS=5 "$DELEGATE" "hi" 2>&1 >/dev/null); rc=$?
+check "custom SUBVIBE_DIGEST_WARN_CHARS threshold respected" 0 "$rc" "raw dump" "$out"
 
 # WSL slow-mount note: fires only under WSL AND when --add-dir is on /mnt/*
 out=$(WSL_DISTRO_NAME=Ubuntu "$DELEGATE" --dir /mnt/c/proj --print-command "hi" 2>&1); rc=$?
@@ -212,8 +212,8 @@ out=$(WSL_DISTRO_NAME=Ubuntu "$DELEGATE" --dir /home/u/proj --print-command "hi"
 if printf '%s' "$out" | grep -q "9p bridge"; then echo "FAIL: slow-mount note fired for a Linux-FS --dir"; FAIL=$((FAIL+1));
 else echo "ok: no slow-mount note for a Linux-FS --dir"; PASS=$((PASS+1)); fi
 
-echo "== agy-job.sh =="
-export ANTIGRAVITY_JOBS="$TMP/jobs"
+echo "== subvibe-job.sh =="
+export SUBVIBE_JOBS="$TMP/jobs"
 
 id=$(STUB_MODE=text "$JOB" start "hello job" 2>/dev/null); rc=$?
 check "job start returns an id" 0 "$rc"
@@ -272,6 +272,7 @@ root = os.environ["ROOT"]
 h = json.load(open(os.path.join(root, "hooks", "hooks.json")))
 cmd = h["hooks"]["SessionStart"][0]["hooks"][0]["command"]
 assert "AGENTS-snippet.md" in cmd and "${PLUGIN_ROOT}" in cmd
+assert os.path.exists(os.path.join(root, "docs", "AGENTS-snippet.md")), "docs/AGENTS-snippet.md missing"
 print("HOOKS_OK")
 PY
 ); rc=$?
@@ -299,7 +300,7 @@ PY
 ); rc=$?
 check "claude plugin manifest + hooks + marketplace valid" 0 "$rc" "CLAUDE_OK" "$out"
 
-for skill in agy-delegate agy-research agy-jobs agy-setup agy-prompting; do
+for skill in subvibe-delegate subvibe-research subvibe-jobs subvibe-setup subvibe-prompting; do
   f="$ROOT/skills/$skill/SKILL.md"
   if [ -f "$f" ] && head -1 "$f" | grep -q '^---$' \
      && grep -q "^name: $skill$" "$f" && grep -q '^description: .' "$f"; then

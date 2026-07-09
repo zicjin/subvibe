@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 #
-# agy-delegate.sh — robust headless delegation wrapper for subagent CLIs.
+# subvibe-delegate.sh — robust headless delegation wrapper for subagent CLIs.
 # Part of the "subvibe" project (subagent delegation plugin for Codex / Claude Code).
 #
 # Purpose: let the conductor agent hand a single, well-scoped subtask to a
-# cheaper subagent CLI (default: Antigravity `agy`) and get clean text back on
-# stdout — for delegation and offloading bulk work.
+# cheaper subagent CLI (default: Grok Build `grok`; Antigravity `agy` also
+# available) and get clean text back on stdout — for delegation and offloading
+# bulk work.
 #
 # Architecture: a CLI-agnostic core (this file) + one driver per subagent CLI
 # (scripts/drivers/<name>.sh). The core owns arg parsing, tier resolution, the
@@ -17,8 +18,8 @@
 # exit on failure or empty output, and never blocking on stdin.
 #
 # Usage:
-#   agy-delegate.sh [options] "the task prompt"
-#   echo "long prompt" | agy-delegate.sh [options] -      # read prompt from stdin
+#   subvibe-delegate.sh [options] "the task prompt"
+#   echo "long prompt" | subvibe-delegate.sh [options] -      # read prompt from stdin
 #
 # Options:
 #   -t, --tier <low|medium|high>     Thinking/cost tier (default: medium)
@@ -38,13 +39,14 @@
 # Exit codes: 0 ok | 1 usage | 2 CLI failed | 3 empty | 10 quota | 11 auth | 12 timeout | 13 CLI missing
 #
 # On a classifiable failure, a machine-readable line is printed to stderr so
-# orchestrators (e.g. agy-job.sh) can react without scraping prose:
-#   AGY_SIGNAL {"status":"QUOTA_EXHAUSTED","reason":"...","model":"...","retry":"--continue"}
+# orchestrators (e.g. subvibe-job.sh) can react without scraping prose:
+#   SUBVIBE_SIGNAL {"status":"QUOTA_EXHAUSTED","reason":"...","model":"...","retry":"--continue"}
 #
-# Tiers map to driver-specific model names (agy: Gemini Flash thinking levels),
-# remappable per tier. Defaults via env: SUBVIBE_DRIVER, AGY_DEFAULT_TIER, _TIMEOUT,
-# _DEFAULT_MODEL (exact name), and per-tier remaps _TIER_LOW / _TIER_MEDIUM /
-# _TIER_HIGH. Explicit --model/--tier win.
+# Tiers map to driver-specific model names (e.g. agy: Gemini Flash thinking
+# levels; grok: model + reasoning effort), remappable per tier. Defaults via
+# env: SUBVIBE_DRIVER, SUBVIBE_DEFAULT_TIER, SUBVIBE_TIMEOUT, SUBVIBE_DEFAULT_MODEL
+# (exact name). Per-driver tier remaps: GROK_TIER_* / AGY_TIER_*. Explicit
+# --model/--tier win.
 #
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -52,8 +54,8 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 # Several of these are the normalized inputs read by the sourced driver
 # (driver_build_args / driver_prompt_notes), which shellcheck can't see.
 # shellcheck disable=SC2034
-TIER="${AGY_DEFAULT_TIER:-medium}"
-TIMEOUT="${AGY_TIMEOUT:-5m}"
+TIER="${SUBVIBE_DEFAULT_TIER:-medium}"
+TIMEOUT="${SUBVIBE_TIMEOUT:-5m}"
 DRIVER="${SUBVIBE_DRIVER:-grok}"
 TIER_EXPLICIT=0
 MODEL=""
@@ -66,7 +68,7 @@ CONTINUE=0
 CONV_ID=""
 PRINT_CMD=0
 
-die() { echo "agy-delegate: $*" >&2; exit 1; }
+die() { echo "subvibe-delegate: $*" >&2; exit 1; }
 # $1 = remaining argc ($#). Fail with a friendly message if an option has no value
 # (avoids `shift 2` aborting under `set -e` with a cryptic "shift count" error).
 need() { [ "$1" -ge 2 ] || die "option '$2' needs a value"; }
@@ -78,7 +80,7 @@ signal() {
   [ "$status" = "QUOTA_EXHAUSTED" ] && retry="--continue"
   # sanitize reason so the JSON stays single-line and valid (no quotes/backslashes/newlines)
   reason="$(printf '%s' "$reason" | tr '\n\r\t' '   ' | tr -d '"\\' | cut -c1-200)"
-  printf 'AGY_SIGNAL {"status":"%s","reason":"%s","model":"%s","retry":"%s"}\n' \
+  printf 'SUBVIBE_SIGNAL {"status":"%s","reason":"%s","model":"%s","retry":"%s"}\n' \
     "$status" "$reason" "${MODEL:-}" "$retry" >&2
 }
 
@@ -163,8 +165,8 @@ DRIVER_FILE="$HERE/drivers/$DRIVER.sh"
 [ -n "$PROMPT" ] || die "no prompt given (pass a string, or '-' to read stdin)"
 # --print-command is a dry run (introspection), so it doesn't require the CLI on PATH.
 if [ "$PRINT_CMD" -ne 1 ] && ! command -v "$DRIVER_BIN" >/dev/null 2>&1; then
-  echo "agy-delegate: '$DRIVER_BIN' not found on PATH — $DRIVER_INSTALL_HINT" >&2
-  signal AGY_MISSING "$DRIVER_BIN not on PATH"
+  echo "subvibe-delegate: '$DRIVER_BIN' not found on PATH — $DRIVER_INSTALL_HINT" >&2
+  signal CLI_MISSING "$DRIVER_BIN not on PATH"
   exit 13
 fi
 
@@ -174,13 +176,13 @@ fi
 if [ -z "$MODEL" ]; then
   if [ "$TIER_EXPLICIT" -eq 1 ]; then
     MODEL="$(driver_model_for_tier "$TIER")" || die "unknown tier '$TIER' (use low | medium | high)"
-  elif [ -n "${AGY_DEFAULT_MODEL:-}" ]; then
-    MODEL="$AGY_DEFAULT_MODEL"
+  elif [ -n "${SUBVIBE_DEFAULT_MODEL:-}" ]; then
+    MODEL="$SUBVIBE_DEFAULT_MODEL"
   else
     # default tier from userConfig; a bad value shouldn't make every call die.
     case "$TIER" in
       low|medium|high) ;;
-      *) echo "agy-delegate: invalid default tier '$TIER' (set AGY_DEFAULT_TIER to low|medium|high); using medium" >&2; TIER="medium" ;;
+      *) echo "subvibe-delegate: invalid default tier '$TIER' (set SUBVIBE_DEFAULT_TIER to low|medium|high); using medium" >&2; TIER="medium" ;;
     esac
     MODEL="$(driver_model_for_tier "$TIER")" || die "unknown tier '$TIER'"
   fi
@@ -213,7 +215,7 @@ fi
 # --- run (always detach stdin so non-TTY stdout is not dropped) ---
 # Per-invocation temp file for stderr (mktemp avoids the race + symlink risk of a
 # fixed /tmp path when multiple delegations run concurrently). Cleaned up on exit.
-ERR="$(mktemp "${TMPDIR:-/tmp}/agy-delegate.XXXXXX")"
+ERR="$(mktemp "${TMPDIR:-/tmp}/subvibe-delegate.XXXXXX")"
 trap 'rm -f "$ERR"' EXIT
 
 # Wall-clock guard: on a non-TTY caller (the whole point of this wrapper), the
@@ -240,14 +242,14 @@ set -e
 # `timeout` exits 124 (SIGTERM) or 137 (SIGKILL after --kill-after) when it had
 # to kill the CLI. Treat that as our structured TIMEOUT (exit 12).
 if [ -n "$TO_CMD" ] && { [ $RC -eq 124 ] || [ $RC -eq 137 ]; }; then
-  echo "agy-delegate: $DRIVER_BIN hit the wall-clock guard (${TO_SECS}s) and was terminated — likely a headless/no-TTY hang." >&2
+  echo "subvibe-delegate: $DRIVER_BIN hit the wall-clock guard (${TO_SECS}s) and was terminated — likely a headless/no-TTY hang." >&2
   driver_hang_hint
   signal TIMEOUT "$DRIVER_BIN wall-clock guard fired after ${TO_SECS}s (headless/no-TTY hang?)"
   exit 12
 fi
 
 if [ $RC -ne 0 ]; then
-  echo "agy-delegate: $DRIVER_BIN exited $RC" >&2
+  echo "subvibe-delegate: $DRIVER_BIN exited $RC" >&2
   [ -s "$ERR" ] && cat "$ERR" >&2
   # Best-effort classification into a structured code (the generic 2 is the safe
   # fallback). The driver owns the CLI-specific stderr patterns.
@@ -257,22 +259,22 @@ if [ $RC -ne 0 ]; then
     AUTH_REQUIRED)   signal AUTH_REQUIRED "$(driver_auth_hint)"; exit 11 ;;
     TIMEOUT)         signal TIMEOUT "$DRIVER_BIN timeout / deadline exceeded"; exit 12 ;;
   esac
-  signal AGY_FAILED "$DRIVER_BIN exited $RC"
+  signal CLI_FAILED "$DRIVER_BIN exited $RC"
   exit 2
 fi
 if [ -z "${OUT//[$' \t\n\r']/}" ]; then
-  echo "agy-delegate: $DRIVER_BIN returned empty output (model='$MODEL')" >&2
+  echo "subvibe-delegate: $DRIVER_BIN returned empty output (model='$MODEL')" >&2
   exit 3
 fi
 
 # Digest-size guard: the cost saving depends on the conductor ingesting a DIGEST,
 # not a raw dump — if the reply is dump-sized, say so on stderr (advisory only;
-# stdout passes through untouched). Tune via env AGY_DIGEST_WARN_CHARS
+# stdout passes through untouched). Tune via env SUBVIBE_DIGEST_WARN_CHARS
 # (empty = 8000, 0 = off).
-WARN_CHARS="${AGY_DIGEST_WARN_CHARS:-8000}"
+WARN_CHARS="${SUBVIBE_DIGEST_WARN_CHARS:-8000}"
 case "$WARN_CHARS" in (*[!0-9]*|'') WARN_CHARS=8000 ;; esac
 if [ "$WARN_CHARS" -gt 0 ] && [ "${#OUT}" -gt "$WARN_CHARS" ]; then
-  echo "agy-delegate: note: output is ${#OUT} chars (> ${WARN_CHARS}) — that looks like a raw dump, not a digest. Don't ingest this into the conductor's context: re-run with --digest, or have agy summarize it first. (env AGY_DIGEST_WARN_CHARS tunes this; 0 disables.)" >&2
+  echo "subvibe-delegate: note: output is ${#OUT} chars (> ${WARN_CHARS}) — that looks like a raw dump, not a digest. Don't ingest this into the conductor's context: re-run with --digest, or have the executor summarize it first. (env SUBVIBE_DIGEST_WARN_CHARS tunes this; 0 disables.)" >&2
 fi
 
 printf '%s\n' "$OUT"

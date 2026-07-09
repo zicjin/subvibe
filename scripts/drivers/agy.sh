@@ -1,9 +1,9 @@
 # shellcheck shell=bash
 #
-# drivers/agy.sh — Antigravity CLI (`agy`) driver for agy-delegate.sh.
+# drivers/agy.sh — Antigravity CLI (`agy`) driver for subvibe-delegate.sh.
 #
 # A driver adapts one headless subagent CLI to the core's normalized contract.
-# It is sourced (not executed) by scripts/agy-delegate.sh and must define the
+# It is sourced (not executed) by scripts/subvibe-delegate.sh and must define the
 # functions below. See docs/drivers.md for the full interface and how to add a
 # new driver (e.g. grok, devin).
 #
@@ -87,7 +87,7 @@ driver_prompt_notes() {
     for d in "${ADD_DIRS[@]:-}"; do
       [ -n "$d" ] || continue
       case "$d" in
-        /mnt/*) echo "agy-delegate: note: --add-dir '$d' is on a Windows mount under WSL; agy reads it over a slow 9p bridge (calls can take 20s+). Move the repo into the Linux FS (~) for ~10x faster I/O." >&2; break ;;
+        /mnt/*) echo "subvibe-delegate: note: --add-dir '$d' is on a Windows mount under WSL; agy reads it over a slow 9p bridge (calls can take 20s+). Move the repo into the Linux FS (~) for ~10x faster I/O." >&2; break ;;
       esac
     done
   fi
@@ -97,7 +97,7 @@ driver_prompt_notes() {
     shopt -s nocasematch
     case "$PROMPT" in
       *implement*|*scaffold*|*migrate*|*refactor*|*"write the file"*|*"create the file"*|*"edit the file"*)
-        echo "agy-delegate: note: this looks like a write task but --yolo is not set — without it agy only DESCRIBES edits and writes nothing (still returns success). Add --yolo (and run on a branch) to actually write files." >&2 ;;
+        echo "subvibe-delegate: note: this looks like a write task but --yolo is not set — without it agy only DESCRIBES edits and writes nothing (still returns success). Add --yolo (and run on a branch) to actually write files." >&2 ;;
     esac
     shopt -u nocasematch
   fi
@@ -108,9 +108,9 @@ driver_prompt_notes() {
 # and no wall-clock guard is available.
 driver_no_guard_warning() {
   if on_windows_native; then
-    echo "agy-delegate: WARNING — native Windows without GNU \`timeout\`/\`gtimeout\` on PATH." >&2
-    echo "agy-delegate:   headless \`agy -p\` can hang here with a 0-byte log (no ConPTY). If this" >&2
-    echo "agy-delegate:   call never returns, run from WSL/macOS/Linux, or install coreutils \`timeout\`." >&2
+    echo "subvibe-delegate: WARNING — native Windows without GNU \`timeout\`/\`gtimeout\` on PATH." >&2
+    echo "subvibe-delegate:   headless \`agy -p\` can hang here with a 0-byte log (no ConPTY). If this" >&2
+    echo "subvibe-delegate:   call never returns, run from WSL/macOS/Linux, or install coreutils \`timeout\`." >&2
   fi
   return 0
 }
@@ -118,7 +118,7 @@ driver_no_guard_warning() {
 # Extra hint printed when the wall-clock guard had to kill the CLI.
 driver_hang_hint() {
   if on_windows_native; then
-    echo "agy-delegate:   native Windows: agy needs a console (ConPTY); run delegation from WSL/macOS/Linux." >&2
+    echo "subvibe-delegate:   native Windows: agy needs a console (ConPTY); run delegation from WSL/macOS/Linux." >&2
   fi
   return 0
 }

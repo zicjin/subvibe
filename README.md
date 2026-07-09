@@ -34,7 +34,7 @@ you → Codex / Claude Code (conduct: design / verify / review)
 - **Adds tools your agent may lack** — live Google/web search, Vertex AI Search over your internal data, deep research. The conductor reviews and re-checks the results.
 - **Background jobs** — fire a long delegation with `subvibe-job`, keep working, collect later.
 - **Built-in cost discipline** — `--digest` output contracts, dump-size warnings, break-even guidance baked into the skills and the policy snippet.
-- **Policy injected automatically** — the plugin's SessionStart hook injects `docs/AGENTS-snippet.md` (routing policy + verification gates) into every session; no per-repo `AGENTS.md` editing. Since the executor CLIs read `AGENTS.md` natively, you can additionally paste the snippet into a repo to share the same harness with them.
+- **Policy injected automatically** — the plugin's SessionStart hook injects `AGENTS-snippet.md` (routing policy + verification gates) into every session; no per-repo `AGENTS.md` editing. Since the executor CLIs read `AGENTS.md` natively, you can additionally paste the snippet into a repo to share the same harness with them.
 - **Pluggable executors** — a driver per subagent CLI ([Grok Build](https://x.ai/cli) is the default, [Antigravity CLI](https://antigravity.google/docs/cli-using) included); switch per call with `--driver` or globally with `SUBVIBE_DRIVER`.
 
 ## 🚀 Install
@@ -63,7 +63,7 @@ The skills call the bundled `scripts/*.sh` by path — no PATH setup needed. Ver
 
 **Prerequisites:** at least one executor CLI installed & authenticated — [Grok Build](https://x.ai/cli) (`grok`, the default; `grok login`) and/or the [Antigravity CLI](https://antigravity.google/docs/cli-using) (`agy`; `agy models` lists models) — plus [Codex CLI](https://github.com/openai/codex) or [Claude Code](https://code.claude.com/docs).
 
-**Platform support:** macOS, Linux, and WSL. Native Windows (Git Bash/MSYS) is not recommended — headless `agy -p` can hang without a real console (ConPTY); the wrapper bounds this with a wall-clock guard (GNU `timeout`/`gtimeout`) and the doctor script distinguishes a hang from an auth failure.
+**Platform support:** macOS, Linux, and WSL. Native Windows (Git Bash/MSYS) is not recommended — headless executor CLIs can hang without a real console (ConPTY) or when unauthenticated; the wrapper bounds this with a wall-clock guard (GNU `timeout`/`gtimeout`) and the doctor script distinguishes a hang from an auth failure.
 
 **Sandbox note:** in the agent's default sandbox, the executor CLI needs network access, so the delegation command may require approval. Approve it when prompted, or run with a policy that allows it (e.g. Codex `--sandbox danger-full-access` in a trusted environment, or an allow rule for the delegation command).
 
@@ -122,8 +122,8 @@ ID=$(subvibe-job start --tier high --dir . "big task"); subvibe-job result "$ID"
 
 - `-p`/`--print` **takes the prompt as its value** and must come last — the wrapper handles this.
 - No `--output-format json` (plain text); `--print` drops stdout on a non-TTY unless stdin is detached (handled via `< /dev/null`).
-- **Writes need `--yolo`:** without it, headless agy only _describes_ edits and returns a confident success **without writing any files**. Long write tasks can exceed the shell-tool time limit → use a background job (`subvibe-job`).
-- **Native Windows (no ConPTY):** headless `agy -p` / `agy models` can hard-hang with a 0-byte log when stdio is redirected. The wrapper wraps agy in a wall-clock `timeout`/`gtimeout` guard so it returns a structured TIMEOUT (exit 12) instead of hanging. Use WSL/macOS/Linux for headless delegation.
+- **Writes need `--yolo`:** without it, a headless executor may only _describe_ edits (or stall waiting for approval) and still return a confident success **without writing any files**. Long write tasks can exceed the shell-tool time limit → use a background job (`subvibe-job`).
+- **Native Windows (no ConPTY):** headless `agy -p` / `agy models` can hard-hang with a 0-byte log when stdio is redirected; unauthenticated headless `grok -p` can also hang. The wrapper wraps the executor in a wall-clock `timeout`/`gtimeout` guard so it returns a structured TIMEOUT (exit 12) instead of hanging. Use WSL/macOS/Linux for headless delegation.
 - **WSL:** running agy with `--add-dir` on a Windows mount (`/mnt/c/...`) is very slow (9p bridge). Keep the repo on the WSL Linux filesystem (`~`). The wrapper and `doctor.sh` warn about this.
 
 ## 📦 What's inside · tests
