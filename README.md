@@ -137,6 +137,7 @@ skills/                          shared plugin skills: subvibe-delegate, subvibe
 hooks/hooks.json                 Codex SessionStart hook — injects the delegation policy as session context
 hooks/claude-hooks.json          Claude Code SessionStart hook (startup + compact) — same policy injection
 scripts/                         subvibe-delegate.sh (CLI-agnostic core) · drivers/ (per-CLI drivers) · subvibe-job.sh · doctor.sh
+docs/AGENTS-snippet.md           routing policy + verification gates (SessionStart injects this into consumer sessions)
 docs/drivers.md                  the driver interface — how to add another subagent CLI
 tests/                           dependency-free tests (stub CLIs); bash tests/run-tests.sh
 ```
